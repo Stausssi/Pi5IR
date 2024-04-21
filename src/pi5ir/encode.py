@@ -1,28 +1,30 @@
 from .util import bytes_to_bits
 
+
 def data_to_binary(code):
     result = []
 
-    pre = code.get('pre_data')
+    pre = code.get("pre_data")
     if pre:
-        result += bytes_to_bits(pre, code, code.get('pre_data_bits'))
+        result += bytes_to_bits(pre, code, code.get("pre_data_bits"))
 
-    result +=  bytes_to_bits(code['data'], code, code.get('bits'))
+    result += bytes_to_bits(code["data"], code, code.get("bits"))
 
-    post = code.get('post_data')
+    post = code.get("post_data")
     if post:
-        result += bytes_to_bits(post, code, code.get('post_data_bits'))
+        result += bytes_to_bits(post, code, code.get("post_data_bits"))
 
     return result
 
+
 def encode_ppm(code):
     pulses = []
-    pulses += code.get('preamble', [])
+    pulses += code.get("preamble", [])
     data = data_to_binary(code)
-    zero = code['zero']
-    one = code['one']
+    zero = code["zero"]
+    one = code["one"]
     bits = 0
-    byte_separator = code.get('byte_separator')
+    byte_separator = code.get("byte_separator")
     for bit in data:
         if bit:
             pulses += one
@@ -31,20 +33,21 @@ def encode_ppm(code):
         bits += 1
         if byte_separator and (bits % 8) == 0 and bits < len(data):
             pulses += byte_separator
-    pulses += code.get('postamble', [])
+    pulses += code.get("postamble", [])
     return pulses
+
 
 def encode_manchester(code):
     levels = []
     level = 1
-    for pulse in code.get('preamble', []):
+    for pulse in code.get("preamble", []):
         levels += [level] * pulse
         level = 1 - level
 
     data = data_to_binary(code)
-    zero = code['zero']
-    one = code['one']
-    long_bit = code.get('long_bit')
+    zero = code["zero"]
+    one = code["one"]
+    long_bit = code.get("long_bit")
     for i, bit in enumerate(data):
         if i == long_bit:
             if bit:
@@ -60,9 +63,9 @@ def encode_manchester(code):
     pulses = []
     level = 1
     pulse = 0
-    for l in levels:
-        if l != level:
-            level = l
+    for lev in levels:
+        if lev != level:
+            level = lev
             pulses.append(pulse)
             pulse = 0
         pulse += 1
@@ -71,32 +74,36 @@ def encode_manchester(code):
 
     return pulses
 
+
 def encode_raw(code):
-    return code['data']
+    return code["data"]
+
 
 encoders = dict(
-    ppm = encode_ppm,
-    manchester = encode_manchester,
-    raw = encode_raw,
+    ppm=encode_ppm,
+    manchester=encode_manchester,
+    raw=encode_raw,
 )
 
+
 def encode_single(code):
-    coding = code['coding']
+    coding = code["coding"]
     encoder = encoders.get(coding)
     if not encoder:
         raise ValueError(f'Unknown coding "{coding}"')
     pulses = encoder(code)
 
-    t = code['timebase']
+    t = code["timebase"]
     pulses = [p * t for p in pulses]
 
-    gap = code.get('gap') or 50_000
+    gap = code.get("gap") or 50_000
     if len(pulses) & 1:
         pulses.append(gap)
     else:
         pulses[-1] += gap
 
     return pulses
+
 
 def encode(codes):
     pulses = []

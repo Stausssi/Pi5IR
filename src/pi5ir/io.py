@@ -1,6 +1,7 @@
-from time import sleep, time
+from time import sleep
 import pigpio
 from .util import synchronized
+
 
 def receive(gpio, glitch=100, timeout=200):
     last_tick = 0
@@ -23,13 +24,13 @@ def receive(gpio, glitch=100, timeout=200):
                 # Ignore the first one (time since last timeout).
                 in_code = True
 
-    pi = pigpio.pi() # Connect to Pi.
+    pi = pigpio.pi()  # Connect to Pi.
 
     if not pi.connected:
-       raise IOError
+        raise IOError
 
-    pi.set_mode(gpio, pigpio.INPUT) # IR RX connected to this GPIO.
-    pi.set_glitch_filter(gpio, glitch) # Ignore glitches.
+    pi.set_mode(gpio, pigpio.INPUT)  # IR RX connected to this GPIO.
+    pi.set_glitch_filter(gpio, glitch)  # Ignore glitches.
     pi.set_watchdog(gpio, timeout)
     pi.callback(gpio, pigpio.EITHER_EDGE, callback)
 
@@ -44,18 +45,19 @@ def receive(gpio, glitch=100, timeout=200):
 
     return pulses
 
+
 @synchronized
 def send(
     gpio,
     pulses,
-    active_low = False,
-    carrier = None,
-    duty_cycle = None,
-    repeat = None,
-    gap = None,
+    active_low=False,
+    carrier=None,
+    duty_cycle=None,
+    repeat=None,
+    gap=None,
 ):
     carrier = carrier or 38_000
-    duty_cycle = duty_cycle or 1/2
+    duty_cycle = duty_cycle or 1 / 2
     repeat = repeat or 1
     gap = gap or 50_000
 
@@ -66,19 +68,19 @@ def send(
         on = int(round(cycle * duty_cycle))
         sofar = 0
         for c in range(cycles):
-            target = int(round((c+1)*cycle))
+            target = int(round((c + 1) * cycle))
             sofar += on
             off = target - sofar
             sofar += off
             if active_low:
-                wf.append(pigpio.pulse(0, 1<<gpio, on))
-                wf.append(pigpio.pulse(1<<gpio, 0, off))
+                wf.append(pigpio.pulse(0, 1 << gpio, on))
+                wf.append(pigpio.pulse(1 << gpio, 0, off))
             else:
-                wf.append(pigpio.pulse(1<<gpio, 0, on))
-                wf.append(pigpio.pulse(0, 1<<gpio, off))
+                wf.append(pigpio.pulse(1 << gpio, 0, on))
+                wf.append(pigpio.pulse(0, 1 << gpio, off))
         return wf
 
-    pi = pigpio.pi() # Connect to Pi.
+    pi = pigpio.pi()  # Connect to Pi.
     if not pi.connected:
         raise IOError
     pi.set_mode(gpio, pigpio.OUTPUT)

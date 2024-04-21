@@ -1,14 +1,19 @@
 import math
+
 from .util import bits_to_bytes
 
+
 def round_to_2_digits(x):
-    if not x: return x
-    if x < 0: return -round_to_2_digits(abs(x))
+    if not x:
+        return x
+    if x < 0:
+        return -round_to_2_digits(abs(x))
     frac = 1 - math.floor(math.log10(x))
     y = round(x, frac)
     if frac <= 0:
         return int(y)
     return y
+
 
 def split_pulses(pulses, min_gap, min_pulses):
     parts = []
@@ -33,8 +38,8 @@ def split_pulses(pulses, min_gap, min_pulses):
 
     return parts, gap
 
+
 def min_pulse(pulses, tolerance):
-    groups = []
     max_pulse = None
     n = 0
     total = 0
@@ -53,6 +58,7 @@ def min_pulse(pulses, tolerance):
     if not n:
         return 0
     return total / n
+
 
 def try_to_quantize(parts, tolerance, timebase, deviation, strict):
     result = []
@@ -78,6 +84,7 @@ def try_to_quantize(parts, tolerance, timebase, deviation, strict):
         result.append(result_part)
     return result
 
+
 def quantize(parts, tolerance):
     marks = []
     spaces = []
@@ -88,13 +95,12 @@ def quantize(parts, tolerance):
     min_space = min_pulse(spaces, tolerance)
 
     for strict in (True, False):
-        min_dev = float('infinity')
+        min_dev = float("infinity")
         best = None
         for m_len, s_len in ((1, 1), (1, 2), (2, 1)):
             timebase = (min_mark + min_space) / (m_len + s_len)
             deviation = (
-                (min_mark - timebase * m_len) +
-                (timebase * s_len - min_space)
+                (min_mark - timebase * m_len) + (timebase * s_len - min_space)
             ) / 2
             result = try_to_quantize(
                 parts,
@@ -103,7 +109,8 @@ def quantize(parts, tolerance):
                 deviation,
                 strict,
             )
-            if not result: continue
+            if not result:
+                continue
             if abs(deviation) < min_dev:
                 min_dev = abs(deviation)
                 best = timebase, result
@@ -113,12 +120,14 @@ def quantize(parts, tolerance):
     # Failed to quantize
     return 1, parts
 
+
 def remove_repeats(parts):
     i = len(parts) - 1
     while i > 0:
         if parts[i] == parts[i - 1]:
             del parts[i]
         i -= 1
+
 
 # Pulse Position Modulation
 def decode_ppm(pulses, msb_first=False):
@@ -132,17 +141,18 @@ def decode_ppm(pulses, msb_first=False):
 
     codes = set()
     for i in range(pre, len(pulses) - 1, 2):
-        pair = pulses[i], pulses[i+1]
+        pair = pulses[i], pulses[i + 1]
         codes.add(pair)
         if len(codes) >= 2:
             break
-    if len(codes) != 2: return None
+    if len(codes) != 2:
+        return None
 
     zero, one = sorted(codes)
     bits = []
     byte_separator = None
     for i in range(pre, len(pulses) - 1, 2):
-        pair = pulses[i], pulses[i+1]
+        pair = pulses[i], pulses[i + 1]
         if pair == one:
             bits.append(1)
         elif pair == zero:
@@ -160,26 +170,27 @@ def decode_ppm(pulses, msb_first=False):
 
     postamble = pulses[i:]
     return dict(
-        preamble = preamble,
-        coding = 'ppm',
-        zero = list(zero),
-        one = list(one),
-        byte_separator = byte_separator,
-        msb_first = msb_first,
-        bits = len(bits),
-        data = bits_to_bytes(bits, msb_first),
-        postamble = postamble,
+        preamble=preamble,
+        coding="ppm",
+        zero=list(zero),
+        one=list(one),
+        byte_separator=byte_separator,
+        msb_first=msb_first,
+        bits=len(bits),
+        data=bits_to_bytes(bits, msb_first),
+        postamble=postamble,
     )
+
 
 # Manchester coding
 def decode_manchester(
     pulses,
     skip,
     preamble,
-    msb_first = True,
-    zero = (0, 1),
-    one = (1, 0),
-    long_bit = None,
+    msb_first=True,
+    zero=(0, 1),
+    one=(1, 0),
+    long_bit=None,
 ):
     levels = []
     level = 0
@@ -198,7 +209,7 @@ def decode_manchester(
 
     bits = []
     for i in range(0, len(levels) - 1, 2):
-        pair = levels[i], levels[i+1]
+        pair = levels[i], levels[i + 1]
         if pair == one:
             bits.append(1)
         elif pair == zero:
@@ -207,24 +218,26 @@ def decode_manchester(
             return None
 
     return dict(
-        preamble = preamble,
-        coding = 'manchester',
-        zero = list(zero),
-        one = list(one),
-        long_bit = long_bit,
-        msb_first = msb_first,
-        bits = len(bits),
-        data = bits_to_bytes(bits, msb_first),
+        preamble=preamble,
+        coding="manchester",
+        zero=list(zero),
+        one=list(one),
+        long_bit=long_bit,
+        msb_first=msb_first,
+        bits=len(bits),
+        data=bits_to_bytes(bits, msb_first),
     )
 
+
 def decode_raw(pulses):
-    return dict(coding='raw', data=pulses)
+    return dict(coding="raw", data=pulses)
+
 
 def decode(
     pulses,
-    min_gap = 15_000,
-    tolerance = 0.2,
-    min_pulses = 10,
+    min_gap=15_000,
+    tolerance=0.2,
+    min_pulses=10,
 ):
     if len(pulses) < min_pulses:
         return None
@@ -254,17 +267,11 @@ def decode(
                     part,
                     8,
                     [1, 5, 1, 1],
-                    msb_first = False,
+                    msb_first=False,
                 )
             else:
                 # RC5
-                result = decode_manchester(
-                    part,
-                    1,
-                    [1],
-                    zero = (1, 0),
-                    one = (0, 1)
-                )
+                result = decode_manchester(part, 1, [1], zero=(1, 0), one=(0, 1))
         if not result:
             result = decode_raw(part)
         results.append(result)
@@ -273,7 +280,7 @@ def decode(
     gap = round_to_2_digits(gap)
 
     for result in results:
-        result['timebase'] = timebase
-        result['gap'] = gap
+        result["timebase"] = timebase
+        result["gap"] = gap
 
     return results

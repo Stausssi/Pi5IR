@@ -1,0 +1,26 @@
+[project]
+name            = "Pi5IR"
+description     = "IR remote control for Raspberry Pi 5"
+readme          = "README.md"
+license         = { file = "LICENSE" }
+dynamic         = ["version"]
+requires-python = ">=3.12"
+dependencies    = ["gpiozero"]
+
+    [project.optional-dependencies]
+    dev = [
+        "pre-commit",
+        "ruff",
+        "pytest",
+    ]
+
+    [project.scripts]
+    pi5ir = "src.pi5ir.cli:main"
+
+[build-system]
+requires      = ["setuptools>=69.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+pythonpath = "src"
+testpaths  = ["tests"]
